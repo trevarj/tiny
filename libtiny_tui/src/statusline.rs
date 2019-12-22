@@ -1,5 +1,5 @@
 use crate::config::Colors;
-use crate::notifier::Notifier;
+use libtiny_ui::Notifier;
 use crate::termbox::print_chars;
 use termbox_simple::Termbox;
 

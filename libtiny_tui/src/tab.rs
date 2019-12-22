@@ -1,10 +1,10 @@
 pub use libtiny_ui::TabStyle;
+use libtiny_ui::Notifier;
 use termbox_simple::{Termbox, TB_UNDERLINE};
 
 use crate::{
     config::{Colors, Style},
     messaging::MessagingUI,
-    notifier::Notifier,
     MsgSource,
 };
 

@@ -1,3 +1,5 @@
+pub mod tabs;
+
 pub use objekt::clone_box;
 use time::Tm;
 
@@ -67,6 +69,17 @@ pub enum TabStyle {
     Normal,
     NewMsg,
     Highlight,
+}
+
+/// Destktop notification handling
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Notifier {
+    /// Notifications are disabled.
+    Off,
+    /// Generate notifications only for mentions.
+    Mentions,
+    /// Generate notificastions for all messages.
+    Messages,
 }
 
 /// UI events

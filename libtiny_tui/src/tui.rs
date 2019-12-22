@@ -7,15 +7,14 @@ use std::str::SplitWhitespace;
 use time::Tm;
 
 use crate::config::Colors;
-use crate::notifier::Notifier;
 use crate::tab::TabStyle;
-
 use crate::config::Style;
 use crate::messaging::{MessagingUI, Timestamp};
 use crate::statusline::{draw_statusline, statusline_visible};
 use crate::tab::Tab;
 use crate::widget::WidgetRet;
 use crate::{MsgSource, MsgTarget};
+use libtiny_ui::Notifier;
 use term_input::{Arrow, Event, Key};
 use termbox_simple::Termbox;
 
@@ -1019,8 +1018,7 @@ impl TUI {
                 .add_privmsg(sender, msg, Timestamp::from(ts), highlight, is_action);
             let nick = tab.widget.get_nick();
             if let Some(nick_) = nick {
-                tab.notifier
-                    .notify_privmsg(sender, msg, target, nick_, highlight);
+                crate::notifier::notify_privmsg(tab.notifier, sender, msg, target, nick_, highlight);
             }
         });
     }
