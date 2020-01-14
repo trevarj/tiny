@@ -716,6 +716,12 @@ dependencies = [
  "gio",
  "glib",
  "gtk",
+ "libtiny_client",
+ "libtiny_logger",
+ "libtiny_ui",
+ "libtiny_wire",
+ "time",
+ "tokio",
 ]
 
 [[package]]

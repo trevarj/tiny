@@ -10,3 +10,9 @@ gdk = "0.12"
 gio = "0.8"
 glib = "0.9"
 gtk = { version = "0.8", features = ["v3_22_30"] }
+libtiny_client = { path = "../libtiny_client" }
+libtiny_logger = { path = "../libtiny_logger" }
+libtiny_ui = { path = "../libtiny_ui" }
+libtiny_wire = { path = "../libtiny_wire" }
+time = "0.1"
+tokio = { version = "0.2.9", features = ["full"] }
