@@ -1,10 +1,11 @@
 use gio::prelude::*;
+use glib::prelude::*;
 use gtk::prelude::*;
 use libtiny_ui::*;
 use tokio::sync::mpsc;
 
-mod tabs;
 mod messaging;
+mod tabs;
 
 use tabs::Tabs;
 
@@ -64,18 +65,28 @@ fn main() {
     application.run(&std::env::args().collect::<Vec<_>>());
 }
 
-fn build_ui(
-    application: &gtk::Application,
-    snd_ev: mpsc::Sender<Event>,
-) {
+fn build_ui(application: &gtk::Application, snd_ev: mpsc::Sender<Event>) {
     let mut tabs = Tabs::new(snd_ev);
     tabs.new_server_tab("mentions".to_string());
+
+    let tabs_clone = tabs.clone();
+    glib::MainContext::default().spawn_local(async move {
+        loop {
+            glib::timeout_future_seconds(1).await;
+            tabs_clone.add_client_msg(
+                "tick".to_string(),
+                MsgTargetOwned::Server {
+                    serv: "mentions".to_string(),
+                },
+            );
+        }
+    });
 
     let window = gtk::ApplicationWindow::new(application);
 
     window.set_title("tiny");
     window.set_decorated(false);
     window.set_default_size(200, 200);
-    window.add(tabs.get_widget());
+    window.add(&tabs.get_widget());
     window.show_all();
 }

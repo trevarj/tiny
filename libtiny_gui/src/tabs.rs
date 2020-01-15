@@ -2,13 +2,40 @@
 
 use gtk::prelude::*;
 use libtiny_ui::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 use time::Tm;
 use tokio::sync::mpsc;
 
 use crate::messaging::MessagingUI;
 use crate::MsgTargetOwned;
 
+#[derive(Clone)]
 pub(crate) struct Tabs {
+    inner: Rc<RefCell<TabsInner>>,
+}
+
+impl Tabs {
+    pub(crate) fn new(snd_ev: mpsc::Sender<Event>) -> Tabs {
+        Tabs {
+            inner: Rc::new(RefCell::new(TabsInner::new(snd_ev))),
+        }
+    }
+
+    pub(crate) fn get_widget(&self) -> gtk::Widget {
+        self.inner.borrow().get_widget()
+    }
+
+    pub(crate) fn new_server_tab(&self, serv: String) -> Option<usize> {
+        self.inner.borrow_mut().new_server_tab(serv)
+    }
+
+    pub(crate) fn add_client_msg(&self, msg: String, target: MsgTargetOwned) {
+        self.inner.borrow_mut().add_client_msg(msg, target)
+    }
+}
+
+struct TabsInner {
     notebook: gtk::Notebook,
     snd_ev: mpsc::Sender<Event>,
     tabs: Vec<Tab>,
@@ -19,20 +46,20 @@ struct Tab {
     src: MsgSource,
 }
 
-impl Tabs {
-    pub(crate) fn new(snd_ev: mpsc::Sender<Event>) -> Tabs {
+impl TabsInner {
+    fn new(snd_ev: mpsc::Sender<Event>) -> TabsInner {
         let notebook = gtk::Notebook::new();
         notebook.set_tab_pos(gtk::PositionType::Bottom);
         notebook.set_scrollable(true);
-        Tabs {
+        TabsInner {
             notebook,
             snd_ev,
             tabs: vec![],
         }
     }
 
-    pub(crate) fn get_widget(&self) -> &gtk::Widget {
-        self.notebook.upcast_ref()
+    fn get_widget(&self) -> gtk::Widget {
+        self.notebook.clone().upcast()
     }
 }
 
@@ -40,8 +67,8 @@ impl Tabs {
 // UI protocol methods
 //
 
-impl Tabs {
-    pub(crate) fn new_server_tab(&mut self, serv: String) -> Option<usize> {
+impl TabsInner {
+    fn new_server_tab(&mut self, serv: String) -> Option<usize> {
         match self.find_serv_tab_idx(&serv) {
             None => {
                 let tab_idx = self.tabs.len();
@@ -57,7 +84,7 @@ impl Tabs {
         }
     }
 
-    pub(crate) fn close_server_tab(&mut self, serv: &str) {
+    fn close_server_tab(&mut self, serv: &str) {
         if let Some(tab_idx) = self.find_serv_tab_idx(serv) {
             self.tabs.retain(|tab: &Tab| tab.src.serv_name() != serv);
             if self.active_idx() == tab_idx {
@@ -66,7 +93,7 @@ impl Tabs {
         }
     }
 
-    pub(crate) fn new_chan_tab(&mut self, serv: String, chan: String) -> Option<usize> {
+    fn new_chan_tab(&mut self, serv: String, chan: String) -> Option<usize> {
         match self.find_chan_tab_idx(&serv, &chan) {
             None => match self.find_last_serv_tab_idx(&serv) {
                 None => {
@@ -98,7 +125,7 @@ impl Tabs {
         }
     }
 
-    pub(crate) fn close_chan_tab(&mut self, serv: &str, chan: &str) {
+    fn close_chan_tab(&mut self, serv: &str, chan: &str) {
         if let Some(tab_idx) = self.find_chan_tab_idx(serv, chan) {
             self.tabs.remove(tab_idx);
             if self.active_idx() == tab_idx {
@@ -107,7 +134,7 @@ impl Tabs {
         }
     }
 
-    pub(crate) fn new_user_tab(&mut self, serv: String, nick: String) -> Option<usize> {
+    fn new_user_tab(&mut self, serv: String, nick: String) -> Option<usize> {
         match self.find_user_tab_idx(&serv, &nick) {
             None => match self.find_last_serv_tab_idx(&serv) {
                 None => {
@@ -135,7 +162,7 @@ impl Tabs {
         }
     }
 
-    pub(crate) fn close_user_tab(&mut self, serv: &str, nick: &str) {
+    fn close_user_tab(&mut self, serv: &str, nick: &str) {
         if let Some(tab_idx) = self.find_user_tab_idx(serv, nick) {
             self.tabs.remove(tab_idx);
             // TODO
@@ -145,47 +172,47 @@ impl Tabs {
         }
     }
 
-    pub(crate) fn add_client_msg(&mut self, msg: String, target: MsgTargetOwned) {
+    fn add_client_msg(&mut self, msg: String, target: MsgTargetOwned) {
         let target = target.borrow();
         self.apply_to_target(&target, &|tab, _| {
             tab.widget.add_client_msg(&msg);
         });
     }
 
-    pub(crate) fn add_msg(&mut self, msg: String, ts: Tm, target: MsgTargetOwned) {
+    fn add_msg(&mut self, msg: String, ts: Tm, target: MsgTargetOwned) {
         let target = target.borrow();
         self.apply_to_target(&target, &|tab, _| {
             tab.widget.add_msg(&msg, ts);
         });
     }
 
-    pub(crate) fn add_err_msg(&mut self, msg: String, ts: Tm, target: MsgTargetOwned) {
+    fn add_err_msg(&mut self, msg: String, ts: Tm, target: MsgTargetOwned) {
         let target = target.borrow();
         self.apply_to_target(&target, &|tab, _| {
             tab.widget.add_err_msg(&msg, ts);
         });
     }
 
-    pub(crate) fn add_client_err_msg(&mut self, msg: String, target: MsgTargetOwned) {
+    fn add_client_err_msg(&mut self, msg: String, target: MsgTargetOwned) {
         let target = target.borrow();
         self.apply_to_target(&target, &|tab, _| {
             tab.widget.add_client_err_msg(&msg);
         });
     }
 
-    pub(crate) fn clear_nicks(&mut self, serv: String) {
+    fn clear_nicks(&mut self, serv: String) {
         let target = MsgTarget::AllServTabs { serv: &serv };
         self.apply_to_target(&target, &|tab: &mut Tab, _| {
             tab.widget.clear_nicks();
         });
     }
 
-    pub(crate) fn set_nick(&mut self, serv: String, new_nick: String) {
+    fn set_nick(&mut self, serv: String, new_nick: String) {
         let target = MsgTarget::AllServTabs { serv: &serv };
         self.apply_to_target(&target, &|tab, _| tab.widget.set_nick(&new_nick));
     }
 
-    pub(crate) fn add_privmsg(
+    fn add_privmsg(
         &mut self,
         sender: String,
         msg: String,
@@ -207,31 +234,25 @@ impl Tabs {
         });
     }
 
-    pub(crate) fn add_nick(&mut self, nick: String, ts: Option<Tm>, target: MsgTargetOwned) {
+    fn add_nick(&mut self, nick: String, ts: Option<Tm>, target: MsgTargetOwned) {
         let target = target.borrow();
         self.apply_to_target(&target, &|tab, _| {
             tab.widget.join(&nick, ts);
         });
     }
 
-    pub(crate) fn remove_nick(&mut self, nick: String, ts: Option<Tm>, target: MsgTargetOwned) {
+    fn remove_nick(&mut self, nick: String, ts: Option<Tm>, target: MsgTargetOwned) {
         let target = target.borrow();
         self.apply_to_target(&target, &|tab, _| {
             tab.widget.part(&nick, ts);
         });
     }
 
-    pub(crate) fn rename_nick(
-        &mut self,
-        old_nick: String,
-        new_nick: String,
-        ts: Tm,
-        target: MsgTargetOwned,
-    ) {
+    fn rename_nick(&mut self, old_nick: String, new_nick: String, ts: Tm, target: MsgTargetOwned) {
         unimplemented!()
     }
 
-    pub(crate) fn set_topic(&mut self, topic: String, ts: Tm, serv: String, chan: String) {
+    fn set_topic(&mut self, topic: String, ts: Tm, serv: String, chan: String) {
         let target = MsgTarget::Chan {
             serv: &serv,
             chan: &chan,
@@ -241,7 +262,7 @@ impl Tabs {
         });
     }
 
-    pub(crate) fn set_tab_style(&mut self, style: TabStyle, target: MsgTargetOwned) {
+    fn set_tab_style(&mut self, style: TabStyle, target: MsgTargetOwned) {
         // TODO
         // unimplemented!()
     }
@@ -251,7 +272,7 @@ impl Tabs {
 // Helpers
 //
 
-impl Tabs {
+impl TabsInner {
     fn new_tab(&mut self, idx: usize, src: MsgSource) {
         let src_ = src.clone();
         let msg_ui = MessagingUI::new(src_, self.snd_ev.clone());
