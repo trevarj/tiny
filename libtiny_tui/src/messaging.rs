@@ -106,14 +106,14 @@ impl MessagingUI {
         self.current_nick.as_ref().map(String::as_str)
     }
 
-    fn draw_input_field(&self, tb: &mut Termbox, colors: &Colors, pos_x: i32, pos_y: i32) {
+    fn draw_input_field<T: Termbox>(&self, tb: &mut T, colors: &Colors, pos_x: i32, pos_y: i32) {
         match self.exit_dialogue {
             Some(ref exit_dialogue) => exit_dialogue.draw(tb, colors, pos_x, pos_y),
             None => self.input_field.draw(tb, colors, pos_x, pos_y),
         }
     }
 
-    pub(crate) fn draw(&self, tb: &mut Termbox, colors: &Colors, pos_x: i32, pos_y: i32) {
+    pub(crate) fn draw<T: Termbox>(&self, tb: &mut T, colors: &Colors, pos_x: i32, pos_y: i32) {
         self.msg_area.draw(tb, colors, pos_x, pos_y);
 
         if let Some(ref nick) = self.current_nick {

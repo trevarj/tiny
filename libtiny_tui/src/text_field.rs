@@ -68,7 +68,7 @@ impl TextField {
         self.move_cursor(cursor);
     }
 
-    pub(crate) fn draw(&self, tb: &mut Termbox, colors: &Colors, pos_x: i32, pos_y: i32) {
+    pub(crate) fn draw<T: Termbox>(&self, tb: &mut T, colors: &Colors, pos_x: i32, pos_y: i32) {
         match self.mode {
             Mode::Edit => {
                 draw_line(
@@ -573,8 +573,8 @@ impl TextField {
     }
 }
 
-fn draw_line(
-    tb: &mut Termbox,
+fn draw_line<T: Termbox>(
+    tb: &mut T,
     colors: &Colors,
     line: &[char],
     pos_x: i32,

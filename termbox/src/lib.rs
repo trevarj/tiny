@@ -3,6 +3,8 @@
 //! A note on wide characters: for characters that take N (N > 1) columns to render this library
 //! skips the next N-1 columns. So wide character support is left to users.
 
+pub mod mock;
+
 use std::cmp::min;
 use std::fs::File;
 use std::io::Write;
@@ -11,11 +13,27 @@ use unicode_width::UnicodeWidthChar;
 // FIXME: Colors are actually (u8, u8) for (style, ansi color)
 // FIXME: Use enter_ca_mode(smcup)/exit_ca_mode(rmcup) from terminfo
 
+pub trait Termbox {
+    fn width(&self) -> i32;
+    fn height(&self) -> i32;
+    fn set_clear_attributes(&mut self, fg: u8, bg: u8);
+    fn hide_cursor(&mut self);
+    fn set_cursor(&mut self, xy: Option<(u16, u16)>);
+    fn change_cell(&mut self, x: i32, y: i32, ch: char, fg: u16, bg: u16);
+    fn resize(&mut self);
+    fn clear(&mut self);
+    fn present(&mut self);
+
+    // HACKY STUFF
+    fn suspend(&mut self);
+    fn activate(&mut self);
+}
+
 pub const TB_DEFAULT: u16 = 0x0000;
 pub const TB_BOLD: u16 = 0x0100;
 pub const TB_UNDERLINE: u16 = 0x0200;
 
-pub struct Termbox {
+pub struct TermboxTUI {
     tty: File,
     old_term: libc::termios,
     term_width: u16,
@@ -92,8 +110,8 @@ impl CellBuf {
     }
 }
 
-impl Termbox {
-    pub fn init() -> std::io::Result<Termbox> {
+impl TermboxTUI {
+    pub fn init() -> std::io::Result<TermboxTUI> {
         // We don't use termion's into_raw_mode() because it doesn't let us do
         // tcsetattr(tty, TCSAFLUSH, ...)
         let mut tty = termion::get_tty()?;
@@ -133,7 +151,7 @@ impl Termbox {
         back_buffer.clear(clear_fg, clear_bg);
         let mut front_buffer = CellBuf::new(term_width, term_height);
         front_buffer.clear(clear_fg, clear_bg);
-        let mut termbox = Termbox {
+        let mut termbox = TermboxTUI {
             tty,
             old_term,
             term_width,
@@ -168,7 +186,7 @@ impl Termbox {
     }
 
     // HACKY
-    pub fn suspend(&mut self) {
+    fn suspend_(&mut self) {
         self.flip_terms();
 
         self.output_buffer
@@ -184,7 +202,7 @@ impl Termbox {
     }
 
     // HACKY
-    pub fn activate(&mut self) {
+    fn activate_(&mut self) {
         self.flip_terms();
 
         // T_ENTER_CA for xterm
@@ -194,19 +212,19 @@ impl Termbox {
         self.present();
     }
 
-    pub fn resize(&mut self) {
+    fn resize_(&mut self) {
         self.buffer_size_change_request = true;
     }
 
-    pub fn width(&self) -> i32 {
+    fn width_(&self) -> i32 {
         self.term_width as i32
     }
 
-    pub fn height(&self) -> i32 {
+    fn height_(&self) -> i32 {
         self.term_height as i32
     }
 
-    pub fn clear(&mut self) {
+    fn clear_(&mut self) {
         if self.buffer_size_change_request {
             self.update_size();
             self.buffer_size_change_request = false;
@@ -214,12 +232,12 @@ impl Termbox {
         self.back_buffer.clear(self.clear_fg, self.clear_bg);
     }
 
-    pub fn set_clear_attributes(&mut self, fg: u8, bg: u8) {
+    fn set_clear_attributes_(&mut self, fg: u8, bg: u8) {
         self.clear_fg = fg;
         self.clear_bg = bg;
     }
 
-    pub fn present(&mut self) {
+    fn present_(&mut self) {
         // Invalidate the terminal cursor
         self.terminal_cursor = (0, 0);
 
@@ -278,7 +296,7 @@ impl Termbox {
         self.flush_output_buffer();
     }
 
-    pub fn hide_cursor(&mut self) {
+    fn hide_cursor_(&mut self) {
         if self.cursor.is_some() {
             self.cursor = None;
             self.output_buffer
@@ -286,7 +304,7 @@ impl Termbox {
         }
     }
 
-    pub fn set_cursor(&mut self, xy: Option<(u16, u16)>) {
+    fn set_cursor_(&mut self, xy: Option<(u16, u16)>) {
         match xy {
             None => match self.cursor {
                 None => {}
@@ -314,7 +332,7 @@ impl Termbox {
     }
 
     // TODO: parameters should be u32
-    pub fn change_cell(&mut self, x: i32, y: i32, ch: char, fg: u16, bg: u16) {
+    fn change_cell_(&mut self, x: i32, y: i32, ch: char, fg: u16, bg: u16) {
         debug_assert!(x >= 0);
         debug_assert!(y >= 0);
         let mut cell =
@@ -411,6 +429,53 @@ impl Termbox {
     }
 }
 
+impl Termbox for TermboxTUI {
+    fn width(&self) -> i32 {
+        self.width_()
+    }
+
+    fn height(&self) -> i32 {
+        self.height_()
+    }
+
+    fn set_clear_attributes(&mut self, fg: u8, bg: u8) {
+        self.set_clear_attributes_(fg, bg)
+    }
+
+    fn hide_cursor(&mut self) {
+        self.hide_cursor_();
+    }
+
+    fn set_cursor(&mut self, xy: Option<(u16, u16)>) {
+        self.set_cursor_(xy)
+    }
+
+    fn change_cell(&mut self, x: i32, y: i32, ch: char, fg: u16, bg: u16) {
+        self.change_cell_(x, y, ch, fg, bg)
+    }
+
+    fn resize(&mut self) {
+        self.resize_()
+    }
+
+    fn clear(&mut self) {
+        self.clear_()
+    }
+
+    fn present(&mut self) {
+        self.present_()
+    }
+
+    // HACKY STUFF
+    fn suspend(&mut self) {
+        self.suspend_()
+    }
+
+    fn activate(&mut self) {
+        self.activate_()
+    }
+}
+
 fn num_to_buf(buf: &mut Vec<u8>, mut num: u16) {
     let start_len = buf.len();
     let mut chars_len = 0;
@@ -443,7 +508,7 @@ fn goto(buf: &mut Vec<u8>, x: u16, y: u16) {
     buf.push(b'H');
 }
 
-impl Drop for Termbox {
+impl Drop for TermboxTUI {
     fn drop(&mut self) {
         self.output_buffer
             .extend_from_slice(termion::cursor::Show.as_ref());

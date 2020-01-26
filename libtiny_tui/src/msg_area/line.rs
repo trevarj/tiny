@@ -192,9 +192,9 @@ impl Line {
         lines
     }
 
-    pub(crate) fn draw(
+    pub(crate) fn draw<T: Termbox>(
         &self,
-        tb: &mut Termbox,
+        tb: &mut T,
         colors: &Colors,
         pos_x: i32,
         pos_y: i32,

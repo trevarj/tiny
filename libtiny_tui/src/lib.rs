@@ -27,6 +27,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 use term_input::Input;
+use termbox_simple::TermboxTUI;
 use time::Tm;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::mpsc;
@@ -37,12 +38,13 @@ extern crate log;
 
 #[derive(Clone)]
 pub struct TUI {
-    inner: Weak<RefCell<tui::TUI>>,
+    inner: Weak<RefCell<tui::TUI<TermboxTUI>>>,
 }
 
 impl TUI {
     pub fn run(config_path: PathBuf) -> (TUI, mpsc::Receiver<Event>) {
-        let tui = Rc::new(RefCell::new(tui::TUI::new(config_path)));
+        let termbox = TermboxTUI::init().unwrap();
+        let tui = Rc::new(RefCell::new(tui::TUI::new(config_path, termbox)));
         let inner = Rc::downgrade(&tui);
 
         let (snd_ev, rcv_ev) = mpsc::channel(10);
@@ -60,7 +62,7 @@ impl TUI {
     }
 }
 
-async fn sigwinch_handler(tui: Weak<RefCell<tui::TUI>>, rcv_abort: mpsc::Receiver<()>) {
+async fn sigwinch_handler(tui: Weak<RefCell<tui::TUI<TermboxTUI>>>, rcv_abort: mpsc::Receiver<()>) {
     let stream = match signal(SignalKind::window_change()) {
         Err(err) => {
             debug!("Can't install SIGWINCH handler: {:?}", err);
@@ -92,7 +94,7 @@ async fn sigwinch_handler(tui: Weak<RefCell<tui::TUI>>, rcv_abort: mpsc::Receive
 }
 
 async fn input_handler(
-    tui: Rc<RefCell<tui::TUI>>,
+    tui: Rc<RefCell<tui::TUI<TermboxTUI>>>,
     mut snd_ev: mpsc::Sender<Event>,
     mut snd_abort: mpsc::Sender<()>,
 ) {

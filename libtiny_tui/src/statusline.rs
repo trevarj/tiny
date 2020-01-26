@@ -8,8 +8,8 @@ pub(crate) fn statusline_visible(width: i32, height: i32) -> bool {
         && height >= 6 // arbitrary
 }
 
-pub(crate) fn draw_statusline(
-    tb: &mut Termbox,
+pub(crate) fn draw_statusline<T: Termbox>(
+    tb: &mut T,
     width: i32,
     colors: &Colors,
     visible_name: &str,

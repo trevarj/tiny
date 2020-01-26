@@ -46,9 +46,9 @@ impl Tab {
         self.visible_name().len() as i32
     }
 
-    pub(crate) fn draw(
+    pub(crate) fn draw<T: Termbox>(
         &self,
-        tb: &mut Termbox,
+        tb: &mut T,
         colors: &Colors,
         mut pos_x: i32,
         pos_y: i32,

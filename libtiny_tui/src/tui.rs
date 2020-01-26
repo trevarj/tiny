@@ -43,9 +43,9 @@ pub(crate) enum TUIRet {
 const LEFT_ARROW: char = '<';
 const RIGHT_ARROW: char = '>';
 
-pub(crate) struct TUI {
+pub(crate) struct TUI<T: Termbox> {
     /// Termbox instance
-    tb: Termbox,
+    tb: T,
 
     /// Color scheme
     colors: Colors,
@@ -64,9 +64,9 @@ pub(crate) struct TUI {
     config_path: PathBuf,
 }
 
-impl TUI {
-    pub(crate) fn new(config_path: PathBuf) -> TUI {
-        let tb = Termbox::init().unwrap(); // TODO: check errors
+impl<T: Termbox> TUI<T> {
+    pub(crate) fn new(config_path: PathBuf, tb: T) -> TUI<T> {
+        // let tb = TermboxTUI::init().unwrap(); // TODO: check errors
 
         // This is now done in reload_config() below
         // tb.set_clear_attributes(colors.clear.fg as u8, colors.clear.bg as u8);
@@ -633,7 +633,7 @@ fn arrow_style(tabs: &[Tab], colors: &Colors) -> Style {
     }
 }
 
-impl TUI {
+impl<T: Termbox> TUI<T> {
     fn draw_left_arrow(&self) -> bool {
         self.h_scroll > 0
     }
@@ -1327,7 +1327,7 @@ impl From<::std::env::VarError> for PasteError {
 ///
 /// FIXME: Ideally this function should get a `Termbox` argument and return a new `Termbox` because
 /// we shutdown the current termbox instance and initialize it again after running $EDITOR.
-fn paste_lines(tb: &mut Termbox, tf: String, str: &str) -> Result<Vec<String>, PasteError> {
+fn paste_lines<T: Termbox>(tb: &mut T, tf: String, str: &str) -> Result<Vec<String>, PasteError> {
     use std::{
         io::{Read, Seek, SeekFrom, Write},
         process::Command,

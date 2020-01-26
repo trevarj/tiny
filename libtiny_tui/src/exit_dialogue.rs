@@ -20,7 +20,7 @@ impl ExitDialogue {
         self.width = width;
     }
 
-    pub(crate) fn draw(&self, tb: &mut Termbox, colors: &Colors, pos_x: i32, pos_y: i32) {
+    pub(crate) fn draw<T: Termbox>(&self, tb: &mut T, colors: &Colors, pos_x: i32, pos_y: i32) {
         tb.hide_cursor();
 
         let mut col = 0;
