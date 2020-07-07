@@ -2,6 +2,7 @@ pub use libtiny_ui::TabStyle;
 use termbox_simple::{Termbox, TB_UNDERLINE};
 
 use crate::{
+    line_split::LineDataCache,
     config::{Colors, Style},
     messaging::MessagingUI,
     notifier::Notifier,
@@ -92,8 +93,10 @@ pub struct TabWidget {
     height: Option<i32>,
     /// Maximum height widget can grow to
     max_height: i32,
-    /// Scroll window - range indices of visible tabs
-    scroll_window: Option<(u32, u32)>,
+    /// Line data for calculating line wrapping
+    line_data: LineDataCache,
+    /// Active line that is visibile in scroll mode
+    active_line: Option<i32>,
     /// Is the widget visible?
     visible: bool,
 }
@@ -106,7 +109,8 @@ impl TabWidget {
             width,
             height: Some(1),
             max_height,
-            scroll_window: None,
+            line_data: LineDataCache::new(false),
+            active_line: None,
             visible: true,
         }
     }
@@ -120,18 +124,52 @@ impl TabWidget {
     }
 
     pub fn handle_close(&mut self) {
-        // invalidate wrapping / scroll lines
+        // invalidate height and scroll_window
     }
 
-    pub fn calculate_height() {}
+    pub fn get_height(&mut self, width: i32) -> i32 {
+        let height = 
+        // Get cached value or calculate
+        if let Some(height) = self.height {
+            height
+        } else {
+            // calculate height
+            self.calculate_height(width)
+        };
 
-    pub fn draw(&self, tb: &mut Termbox, colors: &Colors) {
+        // Check for scroll fallback
+        if height >= self.max_lines || width <= SCROLL_FALLBACK_WIDTH {
+            self.scroll_on();
+            1
+        } else {
+            self.scroll_off();
+            height
+        }
+    }
+
+    pub fn draw(&self, tb: &mut Termbox, width: i32, colors: &Colors) {
+        // get height
+        self.get_height(width);
         // Check if we should scroll
         if self.should_scroll() {
             self.draw_scroll(tb, colors)
         } else {
             self.draw_wrapping(tb, colors)
         }
+    }
+
+    fn calculate_height(&mut self, width: i32) -> i32 {
+        let tab_name_chars = self.tabs.iter().map(|t| t.visible_name()).collect::<Vec<&str>>().join(" ");
+        self.line_data.calculate_height(tab_name_chars.chars(), 0);
+        // set scroll_window based on current line
+        for (line, split) in self.line_data.get_splits().iter().copied().enumerate().rev() {
+            if self.active_tab_idx as i32 >= split {
+                // found active line, set it
+                // +1 because enumeration starts at 0
+                self.active_line = Some(line as i32 + 1);
+            }
+        }
+        self.line_data.get_line_count().unwrap() as i32
     }
 
     fn draw_scroll(&self, tb: &mut Termbox, colors: &Colors) {
