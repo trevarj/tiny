@@ -10,9 +10,9 @@ impl<'a> Iterator for SplitWhitespaceIndices<'a> {
     type Item = usize;
 
     fn next(&mut self) -> Option<usize> {
-        self.inner
-            .next()
-            .map(|str| unsafe { str.as_ptr().offset_from(self.str.as_ptr()) as usize })
+        self.inner.next().map(|str| unsafe {
+            str.as_ptr().offset_from(self.str.as_ptr()) as usize
+        })
     }
 }
 

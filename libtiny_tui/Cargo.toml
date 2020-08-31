@@ -22,5 +22,10 @@ time = "0.1"
 tokio = { version = "0.2.11", default-features = false, features = ["sync", "rt-core", "rt-util", "blocking", "signal", "stream", "time"] }
 
 [dev-dependencies]
+criterion = "0.3"
 libc = "0.2.22"
 mio = "0.6.9"
+
+[[bench]]
+name = "tui_benches"
+harness = false

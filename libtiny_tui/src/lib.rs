@@ -1,7 +1,5 @@
-#![cfg_attr(test, feature(test))]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::cognitive_complexity)]
-#![feature(or_patterns)]
 
 mod config;
 mod editor;
@@ -16,7 +14,7 @@ mod notifier;
 mod statusline;
 mod tab;
 mod termbox;
-mod trie;
+pub mod trie;
 mod tui;
 mod utils;
 mod widget;
