@@ -1,10 +1,9 @@
-use std::cmp::max;
-
 use libtiny_common::{ChanNameRef, MsgSource, TabStyle};
 use termbox_simple::Termbox;
 
 use crate::config::{Colors, Style};
 use crate::tab::Tab;
+use crate::tab_area::tab_panel::calculate_panel_width;
 
 use tab_line::TabLine;
 use tab_panel::TabPanel;
@@ -240,10 +239,6 @@ impl TabArea {
         }
         None
     }
-}
-
-fn calculate_panel_width(tui_width: i32) -> i32 {
-    max(tui_width / 8, 10)
 }
 
 fn is_server_tab(tab: &Tab) -> bool {

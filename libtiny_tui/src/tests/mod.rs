@@ -453,12 +453,12 @@ fn test_tab_panel() {
 
     #[rustfmt::skip]
     let screen =
-    "| #chan5   ↑                             | 
-     | #chan6   │                             | 
-     | #chan7   │                             | 
+    "|          ↑                             | 
      |          │                             | 
-     |          │00:00 #chan7 tab             | 
-     |          │x:                           |";
+     |          │                             | 
+     | #chan5   │                             | 
+     | #chan6   │00:00 #chan7 tab             | 
+     | #chan7   │x:                           |";
 
     expect_screen(screen, &tui.get_front_buffer(), 40, 6, Location::caller());
 

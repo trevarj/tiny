@@ -1,9 +1,11 @@
+use std::cmp::{max, min};
+
 use termbox_simple::Termbox;
 
 use crate::config::Colors;
 use crate::tab::Tab;
 use crate::tab_area::tab_line::TabLine;
-use crate::tab_area::{arrow_style, calculate_panel_width, is_server_tab};
+use crate::tab_area::{arrow_style, is_server_tab};
 
 const UP_ARROW: char = '↑';
 const DOWN_ARROW: char = '↓';
@@ -32,11 +34,11 @@ impl From<TabLine> for TabPanel {
 
 impl TabPanel {
     pub(crate) fn draw(&self, tb: &mut Termbox, tabs: &[Tab], height: i32, colors: &Colors) {
-        let mut pos_y = 0;
+        let mut pos_y = height - 1;
         let skipped = height as usize * (self.page.saturating_sub(1));
-        let mut tabs_iter = tabs.iter().enumerate().skip(skipped).peekable();
-        for idx in pos_y..height {
-            if let Some((tab_idx, tab)) = tabs_iter.next() {
+        let mut tabs_iter = tabs.iter().enumerate().skip(skipped).take(height as usize);
+        for idx in 0..height {
+            if let Some((tab_idx, tab)) = tabs_iter.next_back() {
                 // indent the channels under their server
                 let x_offset = if is_server_tab(tab) { 0 } else { 1 };
                 tab.draw(
@@ -48,13 +50,13 @@ impl TabPanel {
                     Some(self.width - 1 - x_offset),
                 );
             }
-            if idx == 0 && self.page > 1 {
+            if idx == height - 1 && self.page > 1 {
                 // top arrow
                 let arrow_style = arrow_style(&tabs[..skipped], colors);
                 tb.change_cell(self.width, pos_y, UP_ARROW, arrow_style.fg, arrow_style.bg);
-            } else if idx == height - 1 && tabs_iter.peek().is_some() {
+            } else if idx == 0 && tabs.get(skipped + height as usize).is_some() {
                 // bottom arrow
-                let arrow_style = arrow_style(&tabs[skipped + idx as usize + 1..], colors);
+                let arrow_style = arrow_style(&tabs[skipped + height as usize..], colors);
                 tb.change_cell(
                     self.width,
                     pos_y,
@@ -71,7 +73,7 @@ impl TabPanel {
                     colors.faded.bg,
                 );
             }
-            pos_y += 1;
+            pos_y -= 1;
         }
     }
 
@@ -128,4 +130,8 @@ impl TabPanel {
             self.page -= 1;
         }
     }
+}
+
+pub(crate) fn calculate_panel_width(tui_width: i32) -> i32 {
+    max(min(tui_width / 10, 20), 10)
 }
