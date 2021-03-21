@@ -58,6 +58,7 @@ pub(crate) struct Defaults {
     pub(crate) join: Vec<String>,
     #[serde(default)]
     pub(crate) tls: bool,
+    pub(crate) download_dir: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]

@@ -55,6 +55,7 @@ fn main() {
                     servers,
                     defaults,
                     log_dir,
+                    ..
                 } = config;
 
                 let servers = if !server_args.is_empty() {
