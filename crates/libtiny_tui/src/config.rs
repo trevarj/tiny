@@ -16,6 +16,14 @@ pub(crate) struct Config {
     #[serde(default = "usize::max_value")]
     pub(crate) scrollback: usize,
     pub(crate) ui_style: Option<UiStyle>,
+    pub(crate) tab_ui: Option<TabUiType>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum TabUiType {
+    Line,
+    Panel,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

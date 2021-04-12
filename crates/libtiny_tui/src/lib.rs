@@ -11,6 +11,7 @@ mod messaging;
 pub mod msg_area; // Public to be able to use in an example
 mod notifier;
 mod tab;
+mod tab_area;
 mod termbox;
 pub mod test_utils;
 #[doc(hidden)]
